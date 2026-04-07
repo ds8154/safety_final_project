@@ -263,17 +263,45 @@ def run_synthesis(
         )
 
     output_top_risks = _collect_top_risks(validated_results)
-    top_risk_names = ", ".join(r.risk_name for r in output_top_risks[:2]) if output_top_risks else "none identified"
     agent_label = agent_name or validated_results[0].submission_id
 
+    # Build a plain-English executive summary for non-technical stakeholders.
+    top_risk_sentences: list[str] = []
+    for risk in output_top_risks[:3]:
+        mitigation_hint = f" The recommended mitigation is: {risk.mitigation}" if risk.mitigation else ""
+        top_risk_sentences.append(
+            f"{risk.risk_name} ({risk.severity} severity) — {risk.description}.{mitigation_hint}"
+        )
+
+    judge_agreement_sentence = ""
+    if agreement_status == "Full Agreement":
+        judge_agreement_sentence = "All three independent expert judges reached the same conclusion, giving this assessment a high degree of confidence."
+    elif agreement_status == "Partial Disagreement":
+        judge_agreement_sentence = "Two of the three expert judges agreed on the overall risk level. One judge raised a different concern, which has been noted in the recommendation."
+    else:
+        judge_agreement_sentence = "The three expert judges reached different conclusions. This disagreement has been escalated and is reflected in the final recommendation."
+
+    recommendation_plain = {
+        "Pass": "the system has met the required safety thresholds and may proceed to the next stage of deployment planning.",
+        "Pass with Conditions": "the system may proceed only after the identified concerns are formally documented and mitigations are assigned to responsible owners.",
+        "Retest Required": "the system must not proceed. The issues identified below must be addressed and the full council review rerun before any deployment decision.",
+        "Escalate for Human Review": "the system must not proceed under any circumstances without explicit sign-off from a human governance board. The combined risk findings are too significant to approve programmatically.",
+    }.get(final_recommendation, final_recommendation)
+
+    top_risks_block = (
+        " The council identified the following priority risks that require attention: "
+        + " | ".join(top_risk_sentences)
+        if top_risk_sentences
+        else " The council did not identify any high-priority risks at this time."
+    )
+
     rationale = (
-        f"For '{agent_label}': the final synthesis blends all three validated judge scores "
-        f"with the council critique round. "
-        f"The critique reconciled the council at {validated_critique.reconciled_risk_score}/100 "
-        f"({validated_critique.reconciled_risk_tier}); the confidence-weighted blended score is "
-        f"{final_score}/100 ({score_based_tier}).{tier_escalation_note} "
-        f"Highest-priority risks surfaced: {top_risk_names}. "
-        + " ".join(validated_critique.arbitration_notes[:2])
+        f"Executive Summary — {agent_label}: "
+        f"This submission was independently reviewed by three specialised expert judges covering technical safety, "
+        f"governance and policy alignment, and operational risk. "
+        f"{judge_agreement_sentence} "
+        f"Based on the combined assessment, {recommendation_plain}"
+        f"{top_risks_block}"
     ).strip()
 
     output = SynthesisOutput(

@@ -62,7 +62,7 @@ Focus: workflow reliability, deployment context, operational vulnerabilities, an
 ## Repository Structure
 
 ```text
-safety_final_project-main/
+unicc-ai-safety-lab-sp26-main/
 ├── app/
 │   ├── api.py
 │   ├── judge1.py
@@ -140,18 +140,19 @@ curl http://localhost:11434/api/generate -d '{
 
 ### Quickstart (recommended)
 
-From the project root directory, run both backend and frontend in parallel with a single command:
-
 ```text
+cp .env.example .env
 make run
 ```
+
+`cp .env.example .env` copies the environment template (add your `GEMINI_API_KEY` there if using Judge 3 via Gemini). `make run` starts both backend and frontend in parallel.
 
 ### Manual start (two terminals)
 
 #### Terminal 1 — Backend
 
 ```text
-cd safety_final_project-main
+cd unicc-ai-safety-lab-sp26-main
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
@@ -164,7 +165,7 @@ http://127.0.0.1:8000/docs
 #### Terminal 2 — Frontend
 
 ```text
-cd safety_final_project-main
+cd unicc-ai-safety-lab-sp26-main
 streamlit run demo.py
 ```
 
