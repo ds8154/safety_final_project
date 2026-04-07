@@ -148,18 +148,30 @@ if st.button("Evaluate Safety", use_container_width=True):
         # ===== Final Decision =====
         st.header("Final Decision")
 
-        metric_col1, metric_col2, metric_col3 = st.columns(3)
+        final_recommendation = safe_text(synthesis_output.get("final_recommendation"))
+        final_risk_tier = safe_text(synthesis_output.get("final_risk_tier"))
+
+        _RECOMMENDATION_MSG = {
+            "Pass": "✅ **Pass** — The agent met all safety thresholds.",
+            "Pass with Conditions": "⚠️ **Pass with Conditions** — Approval requires documented mitigations.",
+            "Retest Required": "🔁 **Retest Required** — Address findings and rerun the full council review.",
+            "Escalate for Human Review": "🚨 **Escalate for Human Review** — Do not approve deployment without human governance sign-off.",
+        }
+        _msg = _RECOMMENDATION_MSG.get(final_recommendation, f"**{final_recommendation}**")
+
+        if final_recommendation == "Pass":
+            st.success(_msg)
+        elif final_recommendation == "Pass with Conditions":
+            st.warning(_msg)
+        elif final_recommendation in ("Retest Required", "Escalate for Human Review"):
+            st.error(_msg)
+        else:
+            st.info(_msg)
+
+        metric_col1, metric_col2 = st.columns(2)
         with metric_col1:
-            st.metric(
-                "Final Risk Tier",
-                safe_text(synthesis_output.get("final_risk_tier"))
-            )
+            st.metric("Final Risk Tier", final_risk_tier)
         with metric_col2:
-            st.metric(
-                "Final Recommendation",
-                safe_text(synthesis_output.get("final_recommendation"))
-            )
-        with metric_col3:
             st.metric(
                 "Human Review Required",
                 safe_text(synthesis_output.get("human_review_required"))
@@ -263,8 +275,8 @@ if st.button("Evaluate Safety", use_container_width=True):
         st.write(safe_text(critique_round.get("recommended_action")))
 
         # ===== Raw JSON =====
-        st.header("Raw JSON Output")
-        st.json(result)
+        with st.expander("Raw JSON (developer view)"):
+            st.json(result)
 
     except requests.exceptions.ConnectionError:
         st.error(

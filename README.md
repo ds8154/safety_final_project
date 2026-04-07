@@ -125,7 +125,7 @@ curl http://localhost:11434/api/generate -d '{
 ### 1. Start Backend
 
 ```text
-cd ~/Desktop/"UNICC CAPSTONE"
+cd safety_final_project
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
@@ -138,7 +138,7 @@ http://127.0.0.1:8000/docs
 ### 2. Start Frontend
 
 ```text
-cd ~/Desktop/"UNICC CAPSTONE"
+cd safety_final_project
 streamlit run demo.py
 ```
 
