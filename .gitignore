@@ -1,0 +1,25 @@
+# Secrets
+.env
+
+# Runtime outputs
+outputs/
+logs/
+artifacts/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/

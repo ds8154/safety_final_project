@@ -11,12 +11,24 @@ try:
     from app.judge1 import run_judge_1
     from app.judge2 import run_judge_2
     from app.judge3 import run_judge_3
+    from app.models import EvidenceItem, PolicyAlignmentItem, DetectedRisk, ExpertJudgeOutput
     from app.synthesis import run_synthesis
 except ModuleNotFoundError:
     from judge1 import run_judge_1
     from judge2 import run_judge_2
     from judge3 import run_judge_3
+    from models import EvidenceItem, PolicyAlignmentItem, DetectedRisk, ExpertJudgeOutput
     from synthesis import run_synthesis
+
+# Re-export so external code that imports these names from orchestrator
+# continues to work without changes.
+__all__ = [
+    "EvidenceItem",
+    "PolicyAlignmentItem",
+    "DetectedRisk",
+    "ExpertJudgeOutput",
+    "run_pipeline",
+]
 
 
 class SubmittedEvidence(BaseModel):
@@ -42,54 +54,6 @@ class SubmissionInput(BaseModel):
     risk_focus: list[str] = Field(default_factory=list)
     submitted_evidence: list[SubmittedEvidence] = Field(default_factory=list)
     notes: str = ""
-
-
-class EvidenceItem(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    type: str
-    reference: str
-    description: str
-
-
-class PolicyAlignmentItem(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    framework: str
-    status: str
-    note: str
-
-
-class DetectedRisk(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    risk_name: str
-    severity: Literal["Low", "Medium", "High", "Critical"]
-    description: str
-    evidence_reference: str
-    mitigation: str
-
-
-class ExpertJudgeOutput(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    submission_id: str
-    module_name: str
-    module_version: str
-    assessment_timestamp: str
-    perspective_type: str
-    overall_risk_score: int = Field(ge=0, le=100)
-    risk_tier: Literal["Low", "Medium", "High", "Critical"]
-    confidence: float = Field(ge=0.0, le=1.0)
-    key_findings: list[str]
-    reasoning_summary: str
-    evidence: list[EvidenceItem]
-    policy_alignment: list[PolicyAlignmentItem]
-    detected_risks: list[DetectedRisk]
-    recommended_action: str
-    raw_output_reference: str
-    error_flag: bool
-    error_message: str
 
 
 class CritiqueRound(BaseModel):
@@ -319,6 +283,7 @@ def run_pipeline(input_data: dict[str, Any]) -> dict[str, Any]:
     synthesis_output = run_synthesis(
         [result.model_dump() for result in validated_outputs],
         critique_round.model_dump(),
+        agent_name=normalized_input.get("agent_name", ""),
     )
 
     return {

@@ -62,17 +62,25 @@ Focus: workflow reliability, deployment context, operational vulnerabilities, an
 ## Repository Structure
 
 ```text
-UNICC CAPSTONE/
+safety_final_project-main/
 ├── app/
+│   ├── api.py
 │   ├── judge1.py
 │   ├── judge2.py
 │   ├── judge3.py
 │   ├── main.py
+│   ├── models.py
 │   ├── orchestrator.py
+│   ├── runtime_config.py
 │   └── synthesis.py
+├── data/
+│   └── sample_submission.json
+├── tests/
+│   └── test_scoring.py
 ├── demo.py
-├── requirements.txt
+├── .env.example
 ├── Makefile
+├── requirements.txt
 ├── outputs/
 ├── logs/
 └── artifacts/
@@ -130,10 +138,20 @@ curl http://localhost:11434/api/generate -d '{
 
 ## Running the Project
 
-### 1. Start Backend
+### Quickstart (recommended)
+
+From the project root directory, run both backend and frontend in parallel with a single command:
 
 ```text
-cd safety_final_project
+make run
+```
+
+### Manual start (two terminals)
+
+#### Terminal 1 — Backend
+
+```text
+cd safety_final_project-main
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
@@ -143,10 +161,10 @@ Backend docs:
 http://127.0.0.1:8000/docs
 ```
 
-### 2. Start Frontend
+#### Terminal 2 — Frontend
 
 ```text
-cd safety_final_project
+cd safety_final_project-main
 streamlit run demo.py
 ```
 
@@ -155,6 +173,16 @@ Frontend:
 ```text
 http://localhost:8501
 ```
+
+### Mock mode (no LLM required)
+
+To run the full pipeline without Ollama or a Gemini API key, set `MOCK_MODE=1`:
+
+```text
+MOCK_MODE=1 make run
+```
+
+All three judges will return realistic pre-computed outputs for VeriMedia, allowing end-to-end evaluation of the UI and synthesis layer on a clean machine.
 
 ---
 

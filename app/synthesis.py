@@ -6,53 +6,24 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
+try:
+    from app.models import EvidenceItem, PolicyAlignmentItem, DetectedRisk, ExpertJudgeOutput
+except ModuleNotFoundError:
+    from models import EvidenceItem, PolicyAlignmentItem, DetectedRisk, ExpertJudgeOutput
 
-class EvidenceItem(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    type: str
-    reference: str
-    description: str
-
-
-class PolicyAlignmentItem(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    framework: str
-    status: str
-    note: str
-
-
-class DetectedRisk(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    risk_name: str
-    severity: Literal["Low", "Medium", "High", "Critical"]
-    description: str
-    evidence_reference: str
-    mitigation: str
-
-
-class ExpertJudgeOutput(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    submission_id: str
-    module_name: str
-    module_version: str
-    assessment_timestamp: str
-    perspective_type: str
-    overall_risk_score: int = Field(ge=0, le=100)
-    risk_tier: Literal["Low", "Medium", "High", "Critical"]
-    confidence: float = Field(ge=0.0, le=1.0)
-    key_findings: list[str]
-    reasoning_summary: str
-    evidence: list[EvidenceItem]
-    policy_alignment: list[PolicyAlignmentItem]
-    detected_risks: list[DetectedRisk]
-    recommended_action: str
-    raw_output_reference: str
-    error_flag: bool
-    error_message: str
+# Re-export for backwards compatibility with any callers that imported these
+# names directly from synthesis.
+__all__ = [
+    "EvidenceItem",
+    "PolicyAlignmentItem",
+    "DetectedRisk",
+    "ExpertJudgeOutput",
+    "CritiqueRound",
+    "PerModuleSummary",
+    "TopRisk",
+    "SynthesisOutput",
+    "run_synthesis",
+]
 
 
 class CritiqueRound(BaseModel):
@@ -98,12 +69,20 @@ class SynthesisOutput(BaseModel):
     top_risks: list[TopRisk]
     final_risk_tier: Literal["Low", "Medium", "High", "Critical"]
     final_recommendation: Literal["Pass", "Pass with Conditions", "Retest Required", "Escalate for Human Review"]
+    verdict: Literal["APPROVE", "REVIEW", "REJECT"]
     rationale: str
     next_actions: list[str]
     human_review_required: bool
     audit_references: list[str]
     synthesis_version: str
 
+
+_VERDICT_MAP: dict[str, Literal["APPROVE", "REVIEW", "REJECT"]] = {
+    "Pass": "APPROVE",
+    "Pass with Conditions": "REVIEW",
+    "Retest Required": "REJECT",
+    "Escalate for Human Review": "REJECT",
+}
 
 TIER_ORDER = {
     "Low": 1,
@@ -223,7 +202,12 @@ def _next_actions(
     return actions
 
 
-def run_synthesis(results: list[dict[str, Any]], critique_round: dict[str, Any] | None = None) -> dict[str, Any]:
+def run_synthesis(
+    results: list[dict[str, Any]],
+    critique_round: dict[str, Any] | None = None,
+    *,
+    agent_name: str = "",
+) -> dict[str, Any]:
     validated_results = TypeAdapter(list[ExpertJudgeOutput]).validate_python(results)
     validated_critique = CritiqueRound.model_validate(
         critique_round
@@ -269,6 +253,8 @@ def run_synthesis(results: list[dict[str, Any]], critique_round: dict[str, Any] 
     else:
         final_recommendation = "Pass"
 
+    verdict: Literal["APPROVE", "REVIEW", "REJECT"] = _VERDICT_MAP[final_recommendation]
+
     human_review_required = final_recommendation in {"Retest Required", "Escalate for Human Review"} or agreement_status == "Major Disagreement"
     tier_escalation_note = ""
     if final_risk_tier != score_based_tier:
@@ -278,10 +264,10 @@ def run_synthesis(results: list[dict[str, Any]], critique_round: dict[str, Any] 
 
     output_top_risks = _collect_top_risks(validated_results)
     top_risk_names = ", ".join(r.risk_name for r in output_top_risks[:2]) if output_top_risks else "none identified"
-    agent_name = validated_results[0].submission_id
+    agent_label = agent_name or validated_results[0].submission_id
 
     rationale = (
-        f"For submission '{agent_name}': the final synthesis blends all three validated judge scores "
+        f"For '{agent_label}': the final synthesis blends all three validated judge scores "
         f"with the council critique round. "
         f"The critique reconciled the council at {validated_critique.reconciled_risk_score}/100 "
         f"({validated_critique.reconciled_risk_tier}); the confidence-weighted blended score is "
@@ -308,6 +294,7 @@ def run_synthesis(results: list[dict[str, Any]], critique_round: dict[str, Any] 
         top_risks=output_top_risks,
         final_risk_tier=final_risk_tier,
         final_recommendation=final_recommendation,
+        verdict=verdict,
         rationale=rationale,
         next_actions=_next_actions(final_recommendation, validated_critique, agreement_status, output_top_risks),
         human_review_required=human_review_required,

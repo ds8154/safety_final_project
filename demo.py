@@ -149,6 +149,11 @@ if st.button("Evaluate Safety", use_container_width=True):
         # ===== Final Decision =====
         st.header("Final Decision")
 
+        verdict = safe_text(synthesis_output.get("verdict"))
+        _VERDICT_ICONS = {"APPROVE": "🟢", "REVIEW": "🟡", "REJECT": "🔴"}
+        _verdict_icon = _VERDICT_ICONS.get(verdict, "⚪")
+        st.markdown(f"# {_verdict_icon} Council Verdict: **{verdict}**")
+
         final_recommendation = safe_text(synthesis_output.get("final_recommendation"))
         final_risk_tier = safe_text(synthesis_output.get("final_risk_tier"))
 

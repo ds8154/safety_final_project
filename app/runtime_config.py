@@ -50,6 +50,12 @@ def _env(key: str, default: str) -> str:
     return os.environ.get(key, default)
 
 
+def is_mock_mode() -> bool:
+    """Return True when MOCK_MODE=1 is set in the environment or .env file."""
+    load_project_dotenv()
+    return os.environ.get("MOCK_MODE", "").strip() == "1"
+
+
 def get_judge_model_config(
     judge_key: str,
     *,

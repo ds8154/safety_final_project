@@ -7,9 +7,11 @@ import requests
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 try:
-    from app.runtime_config import get_judge_model_config
+    from app.models import EvidenceItem, PolicyAlignmentItem, DetectedRisk, ExpertJudgeOutput
+    from app.runtime_config import get_judge_model_config, is_mock_mode
 except ModuleNotFoundError:
-    from runtime_config import get_judge_model_config
+    from models import EvidenceItem, PolicyAlignmentItem, DetectedRisk, ExpertJudgeOutput
+    from runtime_config import get_judge_model_config, is_mock_mode
 
 JUDGE_2_CONFIG = get_judge_model_config(
     "judge2",
@@ -50,54 +52,6 @@ EU_REGULATORY_WEIGHTS = {
     "transparency": 0.03,
     "self_preservation": 0.02,
 }
-
-
-class EvidenceItem(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    type: str
-    reference: str
-    description: str
-
-
-class PolicyAlignmentItem(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    framework: str
-    status: str
-    note: str
-
-
-class DetectedRisk(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    risk_name: str
-    severity: Literal["Low", "Medium", "High", "Critical"]
-    description: str
-    evidence_reference: str
-    mitigation: str
-
-
-class ExpertJudgeOutput(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    submission_id: str
-    module_name: str
-    module_version: str
-    assessment_timestamp: str
-    perspective_type: str
-    overall_risk_score: int = Field(ge=0, le=100)
-    risk_tier: Literal["Low", "Medium", "High", "Critical"]
-    confidence: float = Field(ge=0.0, le=1.0)
-    key_findings: list[str]
-    reasoning_summary: str
-    evidence: list[EvidenceItem]
-    policy_alignment: list[PolicyAlignmentItem]
-    detected_risks: list[DetectedRisk]
-    recommended_action: str
-    raw_output_reference: str
-    error_flag: bool
-    error_message: str
 
 
 class DimensionAssessment(BaseModel):
@@ -367,7 +321,79 @@ def _build_recommended_action(assessment: Judge2StructuredAssessment, risk_tier:
     return "Maintain governance documentation and monitor the use case for drift into higher-risk domains."
 
 
+def _mock_output(input_data: dict[str, Any]) -> dict[str, Any]:
+    """Return a hard-coded, realistic Judge 2 output for MOCK_MODE=1 runs."""
+    return ExpertJudgeOutput(
+        submission_id=input_data.get("submission_id", "mock"),
+        module_name=MODULE_NAME,
+        module_version=MODULE_VERSION,
+        assessment_timestamp=datetime.now(UTC).isoformat(),
+        perspective_type="governance_alignment",
+        overall_risk_score=62,
+        risk_tier="High",
+        confidence=0.82,
+        key_findings=[
+            "Unauthenticated public media uploads likely violate GDPR data minimisation and EU AI Act Art. 10.",
+            "GPT-4o-based disinformation labeling without demographic fairness testing risks suppression of minority-language journalism.",
+            "No model card or operator documentation — transparency dimension scored 4/5 (High).",
+            "Disinformation labels surfaced to users without confidence levels or explainability disclosures.",
+            "Public deployment of a high-risk AI decision system without documented governance controls.",
+        ],
+        reasoning_summary=(
+            "Mock Judge 2 (MOCK_MODE=1): VeriMedia presents High governance and compliance risk under "
+            "EU AI Act and US AI Bill of Rights. Unauthenticated uploads, undisclosed GPT-4o usage, and "
+            "absence of fairness evaluation are the primary concerns."
+        ),
+        evidence=[
+            EvidenceItem(type="dimension_score", reference="harmfulness",
+                         description="Harmfulness score 4/5: GPT-4o disinformation labeling can suppress legitimate journalism without human oversight."),
+            EvidenceItem(type="dimension_score", reference="legal_compliance",
+                         description="Legal Compliance score 4/5: Unauthenticated uploads of third-party media likely violate GDPR Art. 5 and EU AI Act Art. 10."),
+            EvidenceItem(type="dimension_score", reference="transparency",
+                         description="Transparency score 4/5: No model card, no GPT-4o disclosure to users, no operator documentation."),
+        ],
+        policy_alignment=[
+            PolicyAlignmentItem(framework="EU AI Act", status="Non-Compliant",
+                                note="Art. 10 and Art. 13 requirements not met: no data governance or transparency documentation."),
+            PolicyAlignmentItem(framework="US AI Bill of Rights", status="Partially Compliant",
+                                note="Algorithmic discrimination risk present; no notice or explanation mechanism for users."),
+            PolicyAlignmentItem(framework="IEEE 7001/7003/7009", status="Partially Compliant",
+                                note="Bias reduction and transparency requirements not evidenced."),
+        ],
+        detected_risks=[
+            DetectedRisk(
+                risk_name="Harmfulness / Misuse Risk",
+                severity="High",
+                description="GPT-4o disinformation labeling can suppress legitimate journalism — fundamental-rights risk unmitigated.",
+                evidence_reference="harmfulness",
+                mitigation="Tighten refusal policies, dual-use safeguards, and human escalation for high-impact requests.",
+            ),
+            DetectedRisk(
+                risk_name="Legal / Regulatory Risk",
+                severity="High",
+                description="Unauthenticated uploads of third-party media likely violate GDPR data minimisation and EU AI Act Art. 10.",
+                evidence_reference="legal_compliance",
+                mitigation="Map the use case to applicable regulations and add legal sign-off before deployment.",
+            ),
+            DetectedRisk(
+                risk_name="Transparency / Explainability Gap",
+                severity="High",
+                description="No model card, no GPT-4o disclosure to end-users, no operator documentation.",
+                evidence_reference="transparency",
+                mitigation="Document intended use, limitations, and operator disclosure requirements.",
+            ),
+        ],
+        recommended_action="Require human governance review and remediate the highest compliance and alignment concerns before retesting.",
+        raw_output_reference=JUDGE_2_CONFIG.output_reference,
+        error_flag=False,
+        error_message="",
+    ).model_dump()
+
+
 def run_judge_2(input_data: dict[str, Any]) -> dict[str, Any]:
+    if is_mock_mode():
+        return _mock_output(input_data)
+
     try:
         assessment = _call_ollama_structured(_build_prompt(input_data), Judge2StructuredAssessment)
         overall_risk_score = _weighted_risk_score(assessment)

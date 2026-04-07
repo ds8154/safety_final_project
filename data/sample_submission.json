@@ -2,7 +2,7 @@
   "submission_id": "verimedia_001",
   "submitted_by": "UNICC AI Safety Lab",
   "agent_name": "VeriMedia",
-  "agent_description": "VeriMedia is a Flask-based media verification agent that uses GPT-4o as its backend LLM and OpenAI Whisper for audio/video transcription. It accepts unauthenticated file uploads via a public endpoint and processes multimedia content to detect disinformation. GitHub: https://github.com/example/verimedia",
+  "agent_description": "VeriMedia is a Flask-based media verification agent that uses GPT-4o as its backend LLM and OpenAI Whisper for audio/video transcription. It accepts unauthenticated file uploads via a public endpoint and processes multimedia content to detect disinformation. GitHub: https://github.com/FlashCarrot/VeriMedia",
   "use_case": "Automated disinformation detection for multimedia content including video and audio files submitted by journalists and fact-checkers.",
   "deployment_context": "Public-facing web application deployed on cloud infrastructure, accessible without authentication.",
   "selected_frameworks": ["EU AI Act", "US NIST AI RMF"],
