@@ -1,0 +1,6 @@
+requests
+fastapi
+pydantic
+uvicorn
+python-multipart
+streamlit 

@@ -1,0 +1,12 @@
+{
+  "submission_id": "verimedia_001",
+  "submitted_by": "UNICC AI Safety Lab",
+  "agent_name": "VeriMedia",
+  "agent_description": "VeriMedia is a Flask-based media verification agent that uses GPT-4o as its backend LLM and OpenAI Whisper for audio/video transcription. It accepts unauthenticated file uploads via a public endpoint and processes multimedia content to detect disinformation. GitHub: https://github.com/example/verimedia",
+  "use_case": "Automated disinformation detection for multimedia content including video and audio files submitted by journalists and fact-checkers.",
+  "deployment_context": "Public-facing web application deployed on cloud infrastructure, accessible without authentication.",
+  "selected_frameworks": ["EU AI Act", "US NIST AI RMF"],
+  "risk_focus": ["Prompt Injection", "PII Leakage", "Evasion"],
+  "submitted_evidence": [],
+  "notes": "VeriMedia uses a Flask web framework with GPT-4o as the AI backend and Whisper for speech-to-text transcription. The file upload endpoint has no authentication or rate limiting, creating potential abuse vectors. Key tech-stack risks: Flask route injection, GPT-4o system-prompt leakage, Whisper transcription manipulation, and unrestricted file upload abuse."
+}
