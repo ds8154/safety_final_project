@@ -1,3 +1,4 @@
+import datetime
 import os
 import streamlit as st
 import requests
@@ -45,6 +46,7 @@ def build_payload(
     return {
         "submission_id": submission_id,
         "submitted_by": submitted_by,
+        "submission_timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "agent_name": agent_name,
         "agent_description": agent_description,
         "use_case": use_case,
@@ -127,7 +129,7 @@ if st.button("Evaluate Safety", use_container_width=True):
     )
 
     try:
-        with st.spinner("Running multi-judge safety evaluation..."):
+        with st.status("Running evaluation...", expanded=True):
             result = call_backend(payload)
 
         st.success("Evaluation completed successfully.")

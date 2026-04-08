@@ -145,14 +145,20 @@ def _call_ollama_structured(prompt: str, response_model: type[BaseModel]) -> Bas
         "format": response_model.model_json_schema(),
         "options": {"temperature": JUDGE_2_CONFIG.temperature},
     }
-    response = requests.post(
-        JUDGE_2_CONFIG.ollama_url,
-        json=payload,
-        timeout=JUDGE_2_CONFIG.request_timeout_seconds,
-    )
-    response.raise_for_status()
-    raw_text = response.json()["response"]
-    return response_model.model_validate_json(raw_text)
+    last_exc: Exception = RuntimeError("No attempts made")
+    for _ in range(3):
+        try:
+            response = requests.post(
+                JUDGE_2_CONFIG.ollama_url,
+                json=payload,
+                timeout=JUDGE_2_CONFIG.request_timeout_seconds,
+            )
+            response.raise_for_status()
+            raw_text = response.json()["response"]
+            return response_model.model_validate_json(raw_text)
+        except (ValidationError, ValueError) as exc:
+            last_exc = exc
+    raise last_exc
 
 
 def _weighted_risk_score(assessment: Judge2StructuredAssessment) -> int:

@@ -7,9 +7,9 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
 try:
-    from app.models import EvidenceItem, PolicyAlignmentItem, DetectedRisk, ExpertJudgeOutput
+    from app.models import CritiqueRound, EvidenceItem, PolicyAlignmentItem, DetectedRisk, ExpertJudgeOutput
 except ModuleNotFoundError:
-    from models import EvidenceItem, PolicyAlignmentItem, DetectedRisk, ExpertJudgeOutput
+    from models import CritiqueRound, EvidenceItem, PolicyAlignmentItem, DetectedRisk, ExpertJudgeOutput
 
 # Re-export for backwards compatibility with any callers that imported these
 # names directly from synthesis.
@@ -24,18 +24,6 @@ __all__ = [
     "SynthesisOutput",
     "run_synthesis",
 ]
-
-
-class CritiqueRound(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    participating_modules: list[str]
-    agreement_points: list[str]
-    disagreement_points: list[str]
-    arbitration_notes: list[str]
-    reconciled_risk_score: int = Field(ge=0, le=100)
-    reconciled_risk_tier: Literal["Low", "Medium", "High", "Critical"]
-    recommended_action: str
 
 
 class PerModuleSummary(BaseModel):

@@ -11,13 +11,13 @@ try:
     from app.judge1 import run_judge_1
     from app.judge2 import run_judge_2
     from app.judge3 import run_judge_3
-    from app.models import EvidenceItem, PolicyAlignmentItem, DetectedRisk, ExpertJudgeOutput
+    from app.models import CritiqueRound, EvidenceItem, PolicyAlignmentItem, DetectedRisk, ExpertJudgeOutput
     from app.synthesis import run_synthesis
 except ModuleNotFoundError:
     from judge1 import run_judge_1
     from judge2 import run_judge_2
     from judge3 import run_judge_3
-    from models import EvidenceItem, PolicyAlignmentItem, DetectedRisk, ExpertJudgeOutput
+    from models import CritiqueRound, EvidenceItem, PolicyAlignmentItem, DetectedRisk, ExpertJudgeOutput
     from synthesis import run_synthesis
 
 # Re-export so external code that imports these names from orchestrator
@@ -54,18 +54,6 @@ class SubmissionInput(BaseModel):
     risk_focus: list[str] = Field(default_factory=list)
     submitted_evidence: list[SubmittedEvidence] = Field(default_factory=list)
     notes: str = ""
-
-
-class CritiqueRound(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    participating_modules: list[str]
-    agreement_points: list[str]
-    disagreement_points: list[str]
-    arbitration_notes: list[str]
-    reconciled_risk_score: int = Field(ge=0, le=100)
-    reconciled_risk_tier: Literal["Low", "Medium", "High", "Critical"]
-    recommended_action: str
 
 
 TIER_ORDER = {
@@ -109,7 +97,7 @@ def _enrich_evidence(normalized_input: dict[str, Any]) -> dict[str, Any]:
             url = next((w for w in (desc + " " + ref).split() if "github.com" in w), None)
             if url:
                 try:
-                    r = httpx.get(url, timeout=10, follow_redirects=True)
+                    r = httpx.get(url, timeout=3.0, follow_redirects=True)
                     snippets.append(f"[Fetched {url}]\n{r.text[:3000]}")
                 except Exception:
                     snippets.append(f"[Could not fetch {url}]")

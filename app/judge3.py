@@ -19,18 +19,6 @@ except ModuleNotFoundError:
     from models import EvidenceItem, PolicyAlignmentItem, DetectedRisk, ExpertJudgeOutput
     from runtime_config import load_project_dotenv, is_mock_mode
 
-JUDGE_3_PROVIDER = os.environ.get("JUDGE_3_PROVIDER", "ollama")  # "ollama" | "gemini"
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-
-if JUDGE_3_PROVIDER == "gemini" and not GEMINI_API_KEY:
-    import warnings
-    warnings.warn(
-        "JUDGE_3_PROVIDER=gemini but GEMINI_API_KEY is not set. "
-        "Judge 3 will return a fallback output.",
-        RuntimeWarning,
-        stacklevel=1,
-    )
-
 FRAMEWORK_ALIASES = {
     "eu ai act": "eu_ai_act",
     "eu_ai_act": "eu_ai_act",
@@ -411,13 +399,22 @@ def _generate_content_ollama(
     if temperature is not None:
         payload["options"] = {"temperature": temperature}
 
-    response = requests.post(
-        _ollama_url(),
-        json=payload,
-        timeout=_ollama_timeout_seconds(),
-    )
-    response.raise_for_status()
-    return response.json()["response"]
+    last_exc: Exception = RuntimeError("No attempts made")
+    for _ in range(3):
+        try:
+            response = requests.post(
+                _ollama_url(),
+                json=payload,
+                timeout=_ollama_timeout_seconds(),
+            )
+            response.raise_for_status()
+            text = response.json()["response"]
+            if response_schema is not None:
+                json.loads(_strip_code_fences(text))  # validate JSON; raises ValueError on failure
+            return text
+        except (ValueError, json.JSONDecodeError) as exc:
+            last_exc = exc
+    raise last_exc
 
 
 def _generate_content_routing(

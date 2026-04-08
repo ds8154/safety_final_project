@@ -5,6 +5,18 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class CritiqueRound(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    participating_modules: list[str]
+    agreement_points: list[str]
+    disagreement_points: list[str]
+    arbitration_notes: list[str]
+    reconciled_risk_score: int = Field(ge=0, le=100)
+    reconciled_risk_tier: Literal["Low", "Medium", "High", "Critical"]
+    recommended_action: str
+
+
 class EvidenceItem(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
